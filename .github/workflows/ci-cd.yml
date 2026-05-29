@@ -6,9 +6,6 @@ on:
   pull_request:
     branches: [ "main" ]
 
-env:
-  DOCKER_IMAGE: loja-veloz-pedidos
-
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
@@ -20,38 +17,17 @@ jobs:
       uses: actions/setup-node@v3
       with:
         node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: 'pedidos/package-lock.json'
 
-    - name: Install Dependencies & Lint (Mock)
+    - name: Install Dependencies
       working-directory: ./pedidos
-      run: |
-        npm install
-        # npm run lint (se houvesse)
-        # npm run test (se houvesse testes automatizados)
+      run: npm install
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
+    - name: Build Docker Image (Validação)
+      working-directory: ./pedidos
+      run: docker build -t loja-veloz-pedidos:latest .
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v4
-      with:
-        context: ./pedidos
-        push: ${{ github.event_name == 'push' }}
-        tags: ${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:${{ github.sha }},${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:latest
-        cache-from: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:buildcache
-        cache-to: type=registry,ref=${{ secrets.DOCKER_USERNAME }}/${{ env.DOCKER_IMAGE }}:buildcache,mode=max
-
-  # Simulando Deploy (CD)
   deploy-to-k8s:
     needs: build-and-test
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Repository
@@ -61,4 +37,4 @@ jobs:
       run: |
         echo "Autenticando no cluster..."
         echo "kubectl apply -f k8s/"
-        echo "Deploy Rolling Update (estratégia nativa do K8s) finalizado!"
+        echo "Deploy Rolling Update finalizado!"

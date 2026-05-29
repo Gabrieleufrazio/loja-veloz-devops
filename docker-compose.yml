@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: loja-veloz-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - loja-veloz-net
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: loja-veloz-db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: lojaveloz
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d lojaveloz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - loja-veloz-net
+
+  pedidos:
+    build:
+      context: ./pedidos
+      dockerfile: Dockerfile
+    container_name: loja-veloz-pedidos
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=development
+      - DB_HOST=postgres
+      - DB_USER=admin
+      - DB_PASS=adminpassword
+      - DB_NAME=lojaveloz
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - loja-veloz-net
+
+  pagamentos:
+    build:
+      context: ./pagamentos
+      dockerfile: Dockerfile
+    container_name: loja-veloz-pagamentos
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=development
+      - RABBITMQ_URL=amqp://rabbitmq
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - loja-veloz-net
+
+networks:
+  loja-veloz-net:
+    driver: bridge
+
+volumes:
+  pgdata:

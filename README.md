@@ -104,5 +104,5 @@ Este repositório está configurado com as melhores práticas de DevOps:
 ---
 
 <div align="center">
-  Feito com ❤️ por você e pronto para a aprovação do professor! 🚀
+  Desenvolvido com foco em boas práticas de DevOps e Cloud-Native. 🚀
 </div>
